@@ -1,23 +1,25 @@
 const ApiError = require("../error/ApiError");
+const User = require("../dataBase/User");
 const { userService } = require('../service');
 const { userNormalizator } = require('../helper');
 const userValidator = require('../validators/user.validator');
 const commonValidator = require('../validators/common.validators');
 
 module.exports = {
-  checkIsUserExist: async (req, res, next) => {
+
+  getUserDynamically: (fieldName, from = 'body', dbField = fieldName) => async (req, res, next) => {
     try {
-      const { userId } = req.params;
+      const fieldToSearch = req[from][fieldName];
 
-      const user = await userService.findOneByParams({ _id: userId });
+      const user = await User.findOne({[dbField]: fieldToSearch});
 
-      if (!user) {
+      if(!user){
         throw new ApiError('Inna not found', 404);
       }
 
       req.user = user;
 
-      next();
+      next()
     } catch (e) {
       next(e);
     }
@@ -115,6 +117,23 @@ module.exports = {
       next(e);
     }
   },
+
+  isEditUserValid: async (req, res, next) => {
+    try {
+      let validate = userValidator.editUserValidator.validate(req.body);
+
+      if(validate.error){
+        throw new ApiError(validate.error.message, 400);
+      }
+
+      req.body = validate.value;
+
+      next()
+    } catch (e) {
+      next(e);
+    }
+  },
+
   isUserIdValid: async (req, res, next) => {
     try {
       const { userId} = req.params;
